@@ -2,6 +2,9 @@
 
 AI Prompt Engineer is a modern web-based tool for building, refining, and engineering prompts for large language models (LLMs) like OpenAI GPT and Google Gemini. It provides a guided, wizard-style interface to help users craft comprehensive prompts, experiment with model parameters, and interact with AI in a structured way.
 
+🌐 Try It Online
+Test the AI Prompt Engineer instantly in your browser: https://raw.githack.com/milankmezic/AIPromptEngineer/blob/main/index.html
+
 ## Features
 
 - **Wizard-based Prompt Engineering:** Step-by-step interface to clarify your intent and build detailed prompts.
