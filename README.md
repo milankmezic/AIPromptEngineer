@@ -2,9 +2,6 @@
 
 AI Prompt Engineer is a modern web-based tool for building, refining, and engineering prompts for large language models (LLMs) like OpenAI GPT and Google Gemini. It provides a guided, wizard-style interface to help users craft comprehensive prompts, experiment with model parameters, and interact with AI in a structured way.
 
-🌐 Try It Online
-Test the AI Prompt Engineer instantly in your browser: https://raw.githack.com/milankmezic/AIPromptEngineer/blob/main/index.html
-
 ## Features
 
 - **Wizard-based Prompt Engineering:** Step-by-step interface to clarify your intent and build detailed prompts.
@@ -14,6 +11,9 @@ Test the AI Prompt Engineer instantly in your browser: https://raw.githack.com/m
 - **Markdown Rendering:** AI responses are rendered with full markdown support.
 - **Speech-to-Text:** Use your microphone to dictate messages (Web Speech API supported browsers).
 - **Local Settings Storage:** All settings are saved in your browser for convenience.
+- **Automatic Follow-up Suggestions:** After each AI response, the system automatically generates relevant follow-up actions you can click to continue the conversation.
+- **Auto-focus:** Input boxes automatically receive focus for seamless typing experience.
+- **Clickable Header:** Click the header with robot emoji to return to the first page anytime.
 
 ## Getting Started
 
@@ -36,13 +36,14 @@ Test the AI Prompt Engineer instantly in your browser: https://raw.githack.com/m
    - Click "Get Started" and follow the wizard to build your prompt.
    - Review, refine, and send prompts to the AI.
    - Use the chat interface for follow-up questions and iterative refinement.
+   - Click on automatically generated follow-up suggestions to continue the conversation.
 
 ## Parameters and URL Prefill
 
 You can prefill the API key, model, and base URL fields by passing them as URL parameters when opening the app. This is useful for sharing links or automating configuration.
 
 - `key`: Your API key (e.g., OpenAI or Gemini)
-- `model`: The model name (e.g., `gpt-4`, `google/gemini-2.5-pro`)
+- `model`: The model name (e.g., `gpt-4`, `google/gemini-2.5-flash-lite`)
 - `url`: The base API URL (e.g., `https://api.openai.com/v1`)
 
 **Example:**
@@ -51,6 +52,14 @@ https://yourdomain.com/index.html?key=YOUR_API_KEY&model=gpt-4&url=https://api.o
 ```
 
 When you open the app with these parameters, the corresponding fields will be pre-filled automatically.
+
+## Recent Updates
+
+- **Automatic Follow-up Suggestions:** The AI now generates contextual follow-up actions after each response
+- **Enhanced UX:** Auto-focus on input fields and clickable header navigation
+- **Improved Defaults:** Set to use `google/gemini-2.5-flash-lite` by default
+- **Streamlined Interface:** Removed stream option for cleaner settings panel
+- **GitHub Integration:** Direct link to latest version on GitHub from splash screen
 
 ## Screenshots
 
@@ -65,7 +74,8 @@ When you open the app with these parameters, the corresponding fields will be pr
 - Always keep your API keys secure and do not share them.
 
 ## License
-GNU AFFERO GENERAL PUBLIC LICENSE. See LICENSE for details.
+
+GNU AFFERO GENERAL PUBLIC LICENSE. See [LICENSE](../LICENSE) for details.
 
 ## Credits
 - Built with [Tailwind CSS](https://tailwindcss.com/) and [marked.js](https://marked.js.org/).
