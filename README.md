@@ -16,12 +16,12 @@ AI Prompt Engineer is a modern web-based tool for building, refining, and engine
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/pdf-chat.git
-   cd pdf-chat/AIPromptEngineer
+   git clone https://github.com/milankmezic/AIPromptEngineer.git
+   cd AIPromptEngineer
    ```
 
 2. **Open the App:**
-   - Simply open `v1.html` in your web browser (Chrome recommended).
+   - Simply open `index.html` in your web browser (Chrome recommended).
    - No build step or server required.
 
 3. **Configure API Settings:**
@@ -62,8 +62,7 @@ When you open the app with these parameters, the corresponding fields will be pr
 - Always keep your API keys secure and do not share them.
 
 ## License
-
-MIT License. See [LICENSE](../LICENSE) for details.
+GNU AFFERO GENERAL PUBLIC LICENSE. See [LICENSE](../LICENSE) for details.
 
 ## Credits
 - Built with [Tailwind CSS](https://tailwindcss.com/) and [marked.js](https://marked.js.org/).
