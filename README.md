@@ -68,6 +68,10 @@ When you open the app with these parameters, the corresponding fields will be pr
 
 > _Add screenshots or a demo GIF here to showcase the UI and workflow._
 
+## Demo
+
+🎥 **Watch the demo video:** [AI Prompt Engineer Demo](https://youtu.be/0K5Fi08m1ds)
+
 ## Requirements
 - Modern web browser (Chrome, Edge, Firefox, Safari)
 - OpenAI or Gemini API key (for actual AI responses)
