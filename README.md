@@ -62,7 +62,7 @@ When you open the app with these parameters, the corresponding fields will be pr
 - Always keep your API keys secure and do not share them.
 
 ## License
-GNU AFFERO GENERAL PUBLIC LICENSE. See [LICENSE](../LICENSE) for details.
+GNU AFFERO GENERAL PUBLIC LICENSE. See LICENSE for details.
 
 ## Credits
 - Built with [Tailwind CSS](https://tailwindcss.com/) and [marked.js](https://marked.js.org/).
