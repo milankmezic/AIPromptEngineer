@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prompt Engineer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        accent: {
+                            50: '#f0f9ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .dark .gradient-bg {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+        }
+        .backdrop-blur {
+            backdrop-filter: blur(10px);
+        }
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background-color: #ccc;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .toggle-switch.active {
+            background-color: #3b82f6;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 26px;
+            height: 26px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        .toggle-switch.active::after {
+            transform: translateX(30px);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message-bubble {
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .user-message {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+            margin-left: auto;
+            margin-right: 0;
+        }
+        .ai-message {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 18px 18px 18px 4px;
+            backdrop-filter: blur(10px);
+            margin-left: 0;
+            margin-right: auto;
+        }
+        .typing-indicator {
+            display: inline-block;
+        }
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: white;
+            margin: 0 2px;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        .step-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        .step-item.active .w-8 {
+            background-color: #2563eb;
+        }
+        .step-item.completed .w-8 {
+            background-color: #059669;
+        }
+        .quick-answer-btn {
+            transition: all 0.2s ease;
+        }
+        .quick-answer-btn:hover {
+            transform: translateY(-1px);
+        }
+        .quick-answer-btn.selected {
+            background-color: #2563eb;
+            border-color: #2563eb;
+        }
+        
+        /* Markdown styling for AI responses */
+        .ai-message h1, .ai-message h2, .ai-message h3, .ai-message h4, .ai-message h5, .ai-message h6 {
+            color: white;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .ai-message h1 { font-size: 1.5rem; }
+        .ai-message h2 { font-size: 1.25rem; }
+        .ai-message h3 { font-size: 1.125rem; }
+        
+        .ai-message p {
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
+        }
+        
+        .ai-message ul, .ai-message ol {
+            margin-bottom: 0.75rem;
+            padding-left: 1.5rem;
+        }
+        
+        .ai-message li {
+            margin-bottom: 0.25rem;
+        }
+        
+        .ai-message code {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+        }
+        
+        .ai-message pre {
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        
+        .ai-message pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+        
+        .ai-message blockquote {
+            border-left: 4px solid rgba(255, 255, 255, 0.3);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            font-style: italic;
+        }
+        
+        .ai-message strong {
+            font-weight: 600;
+        }
+        
+        .ai-message em {
+            font-style: italic;
+        }
+        .progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(30, 41, 59, 0.7);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .spinner {
+            border: 6px solid rgba(255,255,255,0.2);
+            border-top: 6px solid #3b82f6;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen transition-colors duration-300">
+    <div id="progress-overlay" class="progress-overlay hidden">
+        <div class="spinner"></div>
+    </div>
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="flex items-center justify-center min-h-screen">
+        <div class="text-center text-white">
+            <h1 class="text-6xl font-bold mb-4 drop-shadow-lg"><span class="text-5xl align-middle mr-4">🤖</span>AI Prompt Engineer</h1>
+            <p class="text-xl mb-8 opacity-90">Build comprehensive AI prompts with guided refinement</p>
+            <button onclick="showMainScreen()" class="bg-white bg-opacity-20 hover:bg-white hover:bg-opacity-100 hover:text-gray-800 text-white font-semibold py-3 px-8 rounded-full border border-white border-opacity-30 transition-all duration-300 shadow-lg hover:shadow-xl">
+                Get Started
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Screen -->
+    <div id="main-screen" class="hidden min-h-screen p-4">
+        <div class="max-w-4xl mx-auto">
+
+
+
+
+            <!-- Settings Panel -->
+            <div id="settings-panel" class="hidden bg-white bg-opacity-10 backdrop-blur rounded-2xl p-6 mb-6 border border-white border-opacity-20">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold text-white">OpenAI Configuration</h2>
+                    <button onclick="showChat()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200">
+                        ← Back to Chat
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- API Configuration -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">API Key</label>
+                            <input type="password" id="key" placeholder="pk-..." value="" class="w-full px-4 py-2 rounded-lg bg-white bg-opacity-90 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Model</label>
+                            <input type="text" id="model" placeholder="gpt-4, gpt-3.5-turbo, etc." value="google/gemini-2.5-pro" class="w-full px-4 py-2 rounded-lg bg-white bg-opacity-90 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Base URL (Optional)</label>
+                            <input type="url" id="url" placeholder="https://api.openai.com/v1" value="https://api.nextautomatica.com/api/v1" class="w-full px-4 py-2 rounded-lg bg-white bg-opacity-90 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Parameters -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Temperature: <span id="temp-value">0.7</span></label>
+                            <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7" class="w-full">
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Max Tokens: <span id="max-tokens-value">1000</span></label>
+                            <input type="range" id="max-tokens" min="1" max="4000" step="1" value="1000" class="w-full">
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Top P: <span id="top-p-value">1</span></label>
+                            <input type="range" id="top-p" min="0" max="1" step="0.1" value="1" class="w-full">
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Frequency Penalty: <span id="freq-penalty-value">0</span></label>
+                            <input type="range" id="frequency-penalty" min="-2" max="2" step="0.1" value="0" class="w-full">
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Presence Penalty: <span id="presence-penalty-value">0</span></label>
+                            <input type="range" id="presence-penalty" min="-2" max="2" step="0.1" value="0" class="w-full">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Settings -->
+                <div class="mt-6 pt-6 border-t border-white border-opacity-20">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white font-medium">Advanced Settings</span>
+                        <div class="toggle-switch" id="advanced-toggle" onclick="toggleAdvanced()"></div>
+                    </div>
+                    
+                    <div id="advanced-settings" class="hidden mt-4 space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-white text-sm font-medium mb-2">System Message</label>
+                                <textarea id="system-message" rows="3" placeholder="You are a helpful assistant..." class="w-full px-4 py-2 rounded-lg bg-white bg-opacity-90 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-white text-sm font-medium mb-2">Stop Sequences (comma-separated)</label>
+                                <input type="text" id="stop-sequences" placeholder="Human:, AI:" class="w-full px-4 py-2 rounded-lg bg-white bg-opacity-90 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <label class="flex items-center text-white">
+                                <input type="checkbox" id="function-calling" class="mr-2">
+                                Enable Function Calling
+                            </label>
+                        </div>
+                        
+                        <!-- Theme Toggle -->
+                        <div class="flex items-center justify-between pt-4 border-t border-white border-opacity-20">
+                            <span class="text-white font-medium">Dark Mode</span>
+                            <div class="toggle-switch" id="theme-toggle" onclick="toggleTheme()"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Management -->
+                <div class="flex justify-center mt-6">
+                    <button onclick="clearSettings()" class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200">
+                        Clear Saved Settings
+                    </button>
+                </div>
+            </div>
+
+            <!-- Wizard Interface -->
+            <div id="chat-panel">
+                <!-- Header -->
+                <div class="flex justify-between items-center mb-4">
+                    <button onclick="goToFirstPage()" class="flex items-center group focus:outline-none" style="background:none;border:none;padding:0;">
+                        <span class="text-3xl mr-2">🤖</span>
+                        <span class="text-2xl font-semibold text-white group-hover:text-blue-400 transition-colors">AI Prompt Engineer</span>
+                    </button>
+                    <div class="flex space-x-2">
+                        <button onclick="showSettings()" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-3 rounded-lg transition-colors duration-200" title="Settings">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </button>
+                        <button onclick="clearChat()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg transition-colors duration-200" title="New Message">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                        </button>
+
+                    </div>
+                </div>
+                
+                <!-- Chat Messages -->
+                <div id="chat-messages" class="mb-4 p-4 rounded-lg hidden">
+                </div>
+
+                <!-- Wizard Input Area -->
+                <div id="wizard-input-area">
+                    <!-- Step 1: Initial Question -->
+                    <div id="step-1-input" class="space-y-4">
+                        <div class="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
+                            <div class="text-center space-y-4">
+                                <h1 class="text-4xl font-bold text-white mb-4">How can I assist you today?</h1>
+                                <p class="text-xl text-white opacity-70 max-w-2xl mx-auto">Start with your main topic or question to begin engineering your AI context</p>
+                            </div>
+                            
+                            <div class="w-full max-w-3xl">
+                                <div class="relative">
+                                    <textarea 
+                                        id="initial-question" 
+                                        placeholder="Ask anything..." 
+                                        rows="4" 
+                                        class="w-full px-6 py-4 text-lg bg-white bg-opacity-95 text-gray-900 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none resize-none shadow-lg"
+                                        style="min-height: 120px;"
+                                    ></textarea>
+                                    <button 
+                                        onclick="handleStep1()" 
+                                        class="absolute bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-12 h-12 flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl"
+                                    >
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Follow-up Questions -->
+                    <div id="step-2-input" class="hidden space-y-4">
+                        <div class="text-center mb-4">
+                            <h3 class="text-xl font-semibold text-white mb-2">Refine Your Context</h3>
+                            <p class="text-white opacity-80">Select options to build a comprehensive prompt</p>
+                        </div>
+                        <div id="follow-up-questions" class="space-y-4">
+                            <!-- Questions will be dynamically added here -->
+                        </div>
+                        <div class="flex justify-center space-x-4">
+                            <button onclick="goBack()" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200">
+                                ← Back
+                            </button>
+                            <button onclick="handleStep3()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200">
+                                Generate Response →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Engineered Prompt -->
+                    <div id="step-3-input" class="hidden space-y-4">
+                        <div class="text-center mb-4">
+                            <h3 class="text-xl font-semibold text-white mb-2">Review Engineered Prompt</h3>
+                            <p class="text-white opacity-80">This is the AI-designed prompt. You can refine it or send it for the final answer.</p>
+                        </div>
+                        <div id="engineered-prompt-box" contenteditable="true" class="bg-white bg-opacity-90 text-gray-900 rounded-lg p-4 border border-blue-400 border-opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-500 overflow-x-auto" style="min-height:4rem; caret-color:#2563eb;"></div>
+                        <div class="flex justify-center space-x-4">
+                            <button onclick="refineEngineeredPrompt()" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200">
+                                Refine
+                            </button>
+                            <button onclick="sendEngineeredPrompt()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200">
+                        Send
+                    </button>
+                </div>
+            </div>
+
+                    <!-- Step 4: Final Response -->
+                    <div id="step-4-input" class="hidden space-y-4">
+                        <div id="follow-up-suggestions" class="flex flex-wrap gap-2 justify-center"></div>
+                        <div class="flex justify-center space-x-4">
+                            <!-- Engineer New Context button removed -->
+                        </div>
+                        <div style="margin-bottom: 2.5rem;"></div>
+            </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <script>
+        // Theme management
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            
+            // Update toggle switch state
+            const themeToggle = document.getElementById('theme-toggle');
+            if (themeToggle) {
+                if (isDark) {
+                    themeToggle.classList.add('active');
+                } else {
+                    themeToggle.classList.remove('active');
+                }
+            }
+            
+            // Save theme preference
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            
+            // Save to settings
+            saveSettings();
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        }
+
+        // Settings management
+        function saveSettings() {
+            const settings = {
+                key: document.getElementById('key').value,
+                model: document.getElementById('model').value,
+                url: document.getElementById('url').value,
+                temperature: document.getElementById('temperature').value,
+                maxTokens: document.getElementById('max-tokens').value,
+                topP: document.getElementById('top-p').value,
+                frequencyPenalty: document.getElementById('frequency-penalty').value,
+                presencePenalty: document.getElementById('presence-penalty').value,
+                systemMessage: document.getElementById('system-message').value,
+                stopSequences: document.getElementById('stop-sequences').value,
+                functionCalling: document.getElementById('function-calling').checked,
+                advancedSettingsOpen: document.getElementById('advanced-toggle').classList.contains('active'),
+                darkMode: document.documentElement.classList.contains('dark'),
+                initialContext: document.getElementById('initial-question').value
+            };
+            localStorage.setItem('aiChatSettings', JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('aiChatSettings');
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                
+                // Load basic settings
+                if (settings.key) document.getElementById('key').value = settings.key;
+                if (settings.model) document.getElementById('model').value = settings.model;
+                if (settings.url) document.getElementById('url').value = settings.url;
+                
+                // Load parameter values
+                if (settings.temperature) {
+                    document.getElementById('temperature').value = settings.temperature;
+                    document.getElementById('temp-value').textContent = settings.temperature;
+                }
+                if (settings.maxTokens) {
+                    document.getElementById('max-tokens').value = settings.maxTokens;
+                    document.getElementById('max-tokens-value').textContent = settings.maxTokens;
+                }
+                if (settings.topP) {
+                    document.getElementById('top-p').value = settings.topP;
+                    document.getElementById('top-p-value').textContent = settings.topP;
+                }
+                if (settings.frequencyPenalty) {
+                    document.getElementById('frequency-penalty').value = settings.frequencyPenalty;
+                    document.getElementById('freq-penalty-value').textContent = settings.frequencyPenalty;
+                }
+                if (settings.presencePenalty) {
+                    document.getElementById('presence-penalty').value = settings.presencePenalty;
+                    document.getElementById('presence-penalty-value').textContent = settings.presencePenalty;
+                }
+                
+                // Load advanced settings
+                if (settings.systemMessage) document.getElementById('system-message').value = settings.systemMessage;
+                if (settings.stopSequences) document.getElementById('stop-sequences').value = settings.stopSequences;
+                if (settings.functionCalling !== undefined) document.getElementById('function-calling').checked = settings.functionCalling;
+                
+                // Load advanced settings toggle state
+                if (settings.advancedSettingsOpen) {
+                    document.getElementById('advanced-toggle').classList.add('active');
+                    document.getElementById('advanced-settings').classList.remove('hidden');
+                }
+                
+                // Load theme toggle state
+                if (settings.darkMode !== undefined) {
+                    if (settings.darkMode) {
+                        document.documentElement.classList.add('dark');
+                        document.getElementById('theme-toggle').classList.add('active');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                        document.getElementById('theme-toggle').classList.remove('active');
+                    }
+                }
+                if (settings.initialContext !== undefined) document.getElementById('initial-question').value = settings.initialContext;
+            }
+        }
+
+        // Screen navigation
+        function showMainScreen() {
+            document.getElementById('splash-screen').classList.add('hidden');
+            document.getElementById('main-screen').classList.remove('hidden');
+            setApiSettingsFromUrl(); // Set API key, model, and base URL from URL if present
+            loadSettings(); // Load settings when main screen is shown
+            showChat(); // Default to chat panel
+            // Hide chat input until step 4
+            document.getElementById('floating-chat-input').style.display = 'none';
+        }
+
+        function showSettings() {
+            document.getElementById('settings-panel').classList.remove('hidden');
+            document.getElementById('chat-panel').classList.add('hidden');
+        }
+
+        function showChat() {
+            document.getElementById('settings-panel').classList.add('hidden');
+            document.getElementById('chat-panel').classList.remove('hidden');
+        }
+
+        // Advanced settings toggle
+        function toggleAdvanced() {
+            const toggle = document.getElementById('advanced-toggle');
+            const settings = document.getElementById('advanced-settings');
+            toggle.classList.toggle('active');
+            settings.classList.toggle('hidden');
+            saveSettings(); // Save the toggle state
+        }
+
+        // Parameter value updates with auto-save
+        document.getElementById('temperature').addEventListener('input', function() {
+            document.getElementById('temp-value').textContent = this.value;
+            saveSettings();
+        });
+        document.getElementById('max-tokens').addEventListener('input', function() {
+            document.getElementById('max-tokens-value').textContent = this.value;
+            saveSettings();
+        });
+        document.getElementById('top-p').addEventListener('input', function() {
+            document.getElementById('top-p-value').textContent = this.value;
+            saveSettings();
+        });
+        document.getElementById('frequency-penalty').addEventListener('input', function() {
+            document.getElementById('freq-penalty-value').textContent = this.value;
+            saveSettings();
+        });
+        document.getElementById('presence-penalty').addEventListener('input', function() {
+            document.getElementById('presence-penalty-value').textContent = this.value;
+            saveSettings();
+        });
+
+        // Add event listeners for all settings to auto-save
+        document.addEventListener('DOMContentLoaded', function() {
+            setApiSettingsFromUrl(); // Set API key, model, and base URL from URL if present on direct load
+            const settingsInputs = [
+                'key', 'model', 'url', 'system-message', 'stop-sequences'
+            ];
+            
+            settingsInputs.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('input', saveSettings);
+                }
+            });
+
+            // Add event listeners for checkboxes
+            document.getElementById('function-calling').addEventListener('change', saveSettings);
+            document.getElementById('initial-question').addEventListener('input', saveSettings);
+        });
+
+        // Wizard functionality
+        let chatHistory = [];
+        let currentStep = 1;
+        let initialQuestion = '';
+        let followUpQuestions = [];
+        let selectedAnswers = {};
+        let engineeredPrompt = '';
+
+        function addMessage(content, isUser = true, useMarkdown = false) {
+            const messagesContainer = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message-bubble ${isUser ? 'user-message' : 'ai-message'} p-3 mb-3 fade-in`;
+            
+            if (isUser && useMarkdown) {
+                // Use markdown for user messages when specified
+                messageDiv.innerHTML = marked.parse(content);
+            } else if (isUser) {
+                messageDiv.textContent = content;
+            } else {
+                // Use markdown for AI responses
+                messageDiv.innerHTML = marked.parse(content);
+            }
+            
+            messagesContainer.appendChild(messageDiv);
+            // Always scroll to bottom after adding a message
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 0);
+        }
+
+        function addTypingIndicator() {
+            const messagesContainer = document.getElementById('chat-messages');
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typing-indicator';
+            typingDiv.className = 'message-bubble ai-message p-3 mb-3';
+            typingDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const typingIndicator = document.getElementById('typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Add user message visually
+            addMessage(message, true);
+            input.value = '';
+
+            // Show typing indicator
+            addTypingIndicator();
+
+            try {
+                // Reconstruct chat history from DOM
+                const messages = [];
+                const chatBubbles = document.querySelectorAll('#chat-messages .message-bubble');
+                chatBubbles.forEach(bubble => {
+                    if (bubble.classList.contains('user-message')) {
+                        messages.push({ role: 'user', content: bubble.textContent });
+                    } else if (bubble.classList.contains('ai-message')) {
+                        messages.push({ role: 'assistant', content: bubble.textContent });
+                    }
+                });
+                // Add the new user message at the end
+                messages.push({ role: 'user', content: message });
+
+                const response = await callOpenAI('', false, false, messages);
+                removeTypingIndicator();
+                // Always process the AI response for chat display
+                processChatResponse(response);
+            } catch (error) {
+                removeTypingIndicator();
+                addMessage('Error: ' + error.message, false);
+            }
+        }
+
+        // Optionally accept a messages array to override chatHistory
+        async function callOpenAI(message, useFullHistory = false, _unused = false, overrideMessages = null, streamOverride = false) {
+            // Hardcoded API configuration
+            const key = document.getElementById('key').value;
+            const model = document.getElementById('model').value;
+            const url = document.getElementById('url').value;
+            const temperature = parseFloat(document.getElementById('temperature').value);
+            const maxTokens = parseInt(document.getElementById('max-tokens').value);
+            const topP = parseFloat(document.getElementById('top-p').value);
+            const frequencyPenalty = parseFloat(document.getElementById('frequency-penalty').value);
+            const presencePenalty = parseFloat(document.getElementById('presence-penalty').value);
+            const systemMessage = document.getElementById('system-message').value;
+            const stopSequences = document.getElementById('stop-sequences').value;
+            const stream = false;
+
+            if (!key) {
+                throw new Error('API key is required');
+            }
+
+            if (!model) {
+                throw new Error('Model name is required');
+            }
+
+            if (!url) {
+                throw new Error('Base URL is required');
+            }
+
+            const messages = [];
+            if (systemMessage) {
+                messages.push({ role: 'system', content: systemMessage });
+            }
+            if (overrideMessages && Array.isArray(overrideMessages)) {
+                messages.push(...overrideMessages);
+            } else if (useFullHistory) {
+                messages.push(...chatHistory);
+            } else {
+                messages.push(...chatHistory, { role: 'user', content: message });
+            }
+
+            const requestBody = {
+                model: model,
+                messages: messages,
+                temperature: temperature,
+                max_tokens: maxTokens,
+                top_p: topP,
+                frequency_penalty: frequencyPenalty,
+                presence_penalty: presencePenalty,
+                stream: stream
+            };
+
+            if (stopSequences) {
+                requestBody.stop = stopSequences.split(',').map(s => s.trim());
+            }
+
+            const response = await fetch(`${url}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${key}`
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || 'API request failed');
+            }
+
+            if (streamOverride) {
+                const streamed = await handleStreamResponse(response);
+                return streamed;
+            } else {
+                const data = await response.json();
+                return data.choices[0].message.content;
+            }
+        }
+
+        async function handleStreamResponse(response) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullResponse = '';
+
+            // Always create a new .ai-message bubble at the start of streaming
+            let aiMessageDiv;
+            const messagesContainer = document.getElementById('chat-messages');
+            // Remove typing indicator if present
+            removeTypingIndicator();
+            aiMessageDiv = document.createElement('div');
+            aiMessageDiv.className = 'message-bubble ai-message p-3 mb-3 fade-in';
+            // Add spinner/typing indicator
+            aiMessageDiv.innerHTML = '<div class="flex items-center"><span class="spinner mr-2" style="border-width:3px;width:20px;height:20px;border-top-color:#3b82f6;"></span><span class="opacity-60">AI is typing...</span></div>';
+            messagesContainer.appendChild(aiMessageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6);
+                        if (data === '[DONE]') {
+                            // Final markdown render after stream is complete
+                            aiMessageDiv.innerHTML = marked.parse(fullResponse);
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            return fullResponse;
+                        }
+                        try {
+                            const parsed = JSON.parse(data);
+                            if (parsed.choices[0].delta.content) {
+                                fullResponse += parsed.choices[0].delta.content;
+                                // Live markdown render during streaming
+                                aiMessageDiv.innerHTML = marked.parse(fullResponse) + '<div class="flex items-center mt-2"><span class="spinner mr-2" style="border-width:3px;width:16px;height:16px;border-top-color:#3b82f6;"></span><span class="opacity-40 text-xs">AI is typing...</span></div>';
+                                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            }
+                        } catch (e) {
+                            // Ignore parsing errors
+                        }
+                    }
+                }
+            }
+            // Final markdown render (in case [DONE] is missed)
+            aiMessageDiv.innerHTML = marked.parse(fullResponse);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            return fullResponse;
+        }
+
+        function clearChat() {
+            // Reset wizard to first page and clear chat
+            resetWizard();
+        }
+
+
+
+        function clearSettings() {
+            if (confirm('Are you sure you want to clear all saved settings? This will reset all configuration to defaults.')) {
+                localStorage.removeItem('aiChatSettings');
+                
+                // Reset all fields to defaults
+                document.getElementById('key').value = '';
+                document.getElementById('model').value = 'gpt-4';
+                document.getElementById('url').value = '';
+                document.getElementById('temperature').value = '0.7';
+                document.getElementById('max-tokens').value = '1000';
+                document.getElementById('top-p').value = '1';
+                document.getElementById('frequency-penalty').value = '0';
+                document.getElementById('presence-penalty').value = '0';
+                document.getElementById('system-message').value = '';
+                document.getElementById('stop-sequences').value = '';
+                document.getElementById('function-calling').checked = false;
+                
+                // Update display values
+                document.getElementById('temp-value').textContent = '0.7';
+                document.getElementById('max-tokens-value').textContent = '1000';
+                document.getElementById('top-p-value').textContent = '1';
+                document.getElementById('freq-penalty-value').textContent = '0';
+                document.getElementById('presence-penalty-value').textContent = '0';
+                
+                // Close advanced settings
+                document.getElementById('advanced-toggle').classList.remove('active');
+                document.getElementById('advanced-settings').classList.add('hidden');
+                
+                // Reset theme to light mode
+                document.documentElement.classList.remove('dark');
+                document.getElementById('theme-toggle').classList.remove('active');
+                
+                showNotification('Settings cleared successfully!', 'success');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg text-white font-semibold z-50 transition-all duration-300 ${
+                type === 'success' ? 'bg-green-600' : 'bg-blue-600'
+            }`;
+            notification.textContent = message;
+            
+            // Add to page
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // Wizard functions
+        function updateStepIndicator(step) {
+            document.querySelectorAll('.step-item').forEach((item, index) => {
+                item.classList.remove('active', 'completed');
+                if (index + 1 < step) {
+                    item.classList.add('completed');
+                } else if (index + 1 === step) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        function showStep(step) {
+            // Hide all step inputs
+            document.getElementById('step-1-input').classList.add('hidden');
+            document.getElementById('step-2-input').classList.add('hidden');
+            document.getElementById('step-3-input').classList.add('hidden');
+            document.getElementById('step-4-input').classList.add('hidden');
+            
+            // Show current step
+            document.getElementById(`step-${step}-input`).classList.remove('hidden');
+            
+            // Show/hide chat messages based on step
+            const chatMessages = document.getElementById('chat-messages');
+            if (step === 4) {
+                chatMessages.classList.remove('hidden');
+                document.getElementById('floating-chat-input').style.display = '';
+            } else {
+                chatMessages.classList.add('hidden');
+                document.getElementById('floating-chat-input').style.display = 'none';
+            }
+            
+            // Update step indicator
+            updateStepIndicator(step);
+        }
+
+        function showProgress() {
+            document.getElementById('progress-overlay').classList.remove('hidden');
+        }
+        function hideProgress() {
+            document.getElementById('progress-overlay').classList.add('hidden');
+        }
+
+        // For wizard/refinement steps: process response, never add to chat
+        function processWizardResponse(response) {
+            // Get content field if response is an object
+            let answerPart = response;
+            if (typeof response === 'object' && response !== null) {
+                if (response.content) answerPart = response.content;
+                else if (response.choices && response.choices[0] && response.choices[0].message && response.choices[0].message.content) {
+                    answerPart = response.choices[0].message.content;
+                }
+            }
+            // Extract JSON from code block if present
+            let jsonText = answerPart;
+            const codeBlockMatch = answerPart.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+            if (codeBlockMatch) {
+                jsonText = codeBlockMatch[1];
+            }
+            let suggestions = [];
+            try {
+                const obj = JSON.parse(jsonText);
+                if (obj.questions) suggestions = obj.questions;
+            } catch (e) {
+                suggestions = [];
+            }
+            return { answer: answerPart, suggestions };
+        }
+
+        // For chat: only add to chat if not JSON/code/prompt
+        function processChatResponse(response) {
+            let answerPart = response;
+            // If response is an object, extract the content field
+            if (typeof response === 'object' && response !== null) {
+                if (response.content) answerPart = response.content;
+                else if (response.choices && response.choices[0] && response.choices[0].message && response.choices[0].message.content) {
+                    answerPart = response.choices[0].message.content;
+                }
+            }
+            // Always remove spinner before rendering
+            removeTypingIndicator();
+            // For chat, just show the content as markdown
+            if (answerPart && answerPart.replace(/\s/g, '').length > 0) {
+                addMessage(answerPart, false);
+            }
+        }
+
+        // Process follow-up suggestions and optionally show in chat
+        function processFollowUpSuggestions(response, showInChat = true) {
+            let answerPart = response;
+            // If response is an object, extract the content field
+            if (typeof response === 'object' && response !== null) {
+                if (response.content) answerPart = response.content;
+                else if (response.choices && response.choices[0] && response.choices[0].message && response.choices[0].message.content) {
+                    answerPart = response.choices[0].message.content;
+                }
+            }
+            
+            if (showInChat && answerPart && answerPart.replace(/\s/g, '').length > 0) {
+                addMessage(answerPart, false);
+            }
+            
+            // Get new follow-up suggestions based on the latest answer
+            getFollowUpSuggestions(answerPart);
+        }
+
+        // Step 1: Initial Question
+        function handleStep1() {
+            const question = document.getElementById('initial-question').value.trim();
+            if (!question) return;
+            initialQuestion = question;
+            localStorage.setItem('step1', JSON.stringify({ initialQuestion }));
+            showProgress();
+            // Show typing indicator in a temporary way
+            const tempIndicator = document.createElement('div');
+            tempIndicator.className = 'text-center text-white opacity-60 mb-4';
+            tempIndicator.textContent = 'Generating follow-up questions...';
+            document.getElementById('step-1-input').appendChild(tempIndicator);
+            generateFollowUpQuestions(question)
+                .then(response => {
+                    tempIndicator.remove();
+                    hideProgress();
+                    const processed = processWizardResponse(response);
+                    handleStep2(processed.suggestions);
+                })
+                .catch(error => {
+                    tempIndicator.remove();
+                    hideProgress();
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'text-center text-red-400 mb-4';
+                    errorDiv.textContent = 'Error: ' + error.message;
+                    document.getElementById('step-1-input').appendChild(errorDiv);
+                    setTimeout(() => errorDiv.remove(), 5000);
+                });
+        }
+
+        // Step 2: Follow-up Questions
+        function handleStep2(questionsArray) {
+            // Accepts an array of {question, answers} or a JSON string
+            let questions = [];
+            if (typeof questionsArray === 'string') {
+                try {
+                    const parsed = JSON.parse(questionsArray);
+                    questions = parsed.questions || parsed;
+                } catch (e) {
+                    console.error('Failed to parse questions JSON:', e);
+                    return;
+                }
+            } else if (Array.isArray(questionsArray)) {
+                questions = questionsArray;
+            } else {
+                console.error('Invalid questions format:', questionsArray);
+                return;
+            }
+            followUpQuestions = questions;
+            localStorage.setItem('step2', JSON.stringify({ followUpQuestions, selectedAnswers }));
+            const container = document.getElementById('follow-up-questions');
+            container.innerHTML = '';
+            followUpQuestions.forEach((q, qIndex) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'bg-white bg-opacity-10 backdrop-blur rounded-lg p-4 border border-white border-opacity-20';
+                questionDiv.innerHTML = `
+                    <h4 class="text-white font-semibold mb-3">${q.question}</h4>
+                    <div class="flex flex-wrap gap-2">
+                        ${q.answers.map((answer, aIndex) => `
+                            <button onclick="selectAnswer(${qIndex}, ${aIndex}, '${answer.replace(/'/g, "\\'")}')" 
+                                    class="quick-answer-btn bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1 rounded-full border border-white border-opacity-30 text-sm">
+                                ${answer}
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(questionDiv);
+            });
+            currentStep = 2;
+            showStep(2);
+        }
+
+        // Step 3: Engineered Prompt
+        async function handleStep3() {
+            let comprehensivePrompt = `Original question: ${initialQuestion}\n\n`;
+            Object.keys(selectedAnswers).forEach(key => {
+                const question = followUpQuestions[key].question;
+                const answers = selectedAnswers[key];
+                if (answers && answers.length > 0) {
+                    comprehensivePrompt += `Q: ${question}\nA: ${answers.join(', ')}\n\n`;
+                }
+            });
+            comprehensivePrompt += `Based on the original question and these clarifications, provide a comprehensive and detailed response.`;
+            showProgress();
+            addTypingIndicator();
+            try {
+                const promptDesignInstruction = `Given the following context and clarifications, design the best possible prompt for a large language model to answer the user's needs. Return only the prompt, nothing else.\n\n---\n\n${comprehensivePrompt}`;
+                engineeredPrompt = await callOpenAI(promptDesignInstruction);
+                localStorage.setItem('step3', JSON.stringify({ engineeredPrompt }));
+                removeTypingIndicator();
+                document.getElementById('engineered-prompt-box').innerHTML = marked.parse(engineeredPrompt);
+                hideProgress();
+                currentStep = 3;
+                showStep(3);
+            } catch (error) {
+                removeTypingIndicator();
+                hideProgress();
+                addMessage('Error: ' + error.message, false);
+            }
+        }
+
+        // Replace old step triggers with new functions
+        document.getElementById('initial-question').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleStep1();
+            }
+        });
+
+        function selectAnswer(questionIndex, answerIndex, answer) {
+            // Initialize array for this question if it doesn't exist
+            if (!selectedAnswers[questionIndex]) {
+                selectedAnswers[questionIndex] = [];
+            }
+            
+            // Toggle selection
+            const answerArray = selectedAnswers[questionIndex];
+            const answerIndexInArray = answerArray.indexOf(answer);
+            
+            if (answerIndexInArray === -1) {
+                // Add selection
+                answerArray.push(answer);
+            } else {
+                // Remove selection
+                answerArray.splice(answerIndexInArray, 1);
+            }
+            
+            // Update button appearance
+            const questionDiv = document.getElementById('follow-up-questions').children[questionIndex];
+            const buttons = questionDiv.querySelectorAll('.quick-answer-btn');
+            
+            buttons.forEach((btn, index) => {
+                btn.classList.remove('selected');
+                if (answerArray.includes(btn.textContent.trim())) {
+                    btn.classList.add('selected');
+                }
+            });
+        }
+
+        async function generateFollowUpQuestions(question) {
+            const prompt = `Based on this question: "${question}", generate 3-4 follow-up questions that would help clarify and expand on the topic. For each question, provide 3-4 quick answer options. Format your response as JSON like this:
+{
+  "questions": [
+    {
+      "question": "What specific aspect are you most interested in?",
+      "answers": ["Technical details", "General overview", "Step-by-step guide", "Best practices"]
+    }
+  ]
+}`;
+
+            return await callOpenAI(prompt);
+        }
+
+        function displayFollowUpQuestions(questionsArray) {
+            // Accepts an array of {question, answers} or a JSON string
+            let questions = [];
+            
+            if (typeof questionsArray === 'string') {
+                // Try to parse JSON string
+                try {
+                    const parsed = JSON.parse(questionsArray);
+                    questions = parsed.questions || parsed;
+                } catch (e) {
+                    console.error('Failed to parse questions JSON:', e);
+                    return;
+                }
+            } else if (Array.isArray(questionsArray)) {
+                questions = questionsArray;
+            } else {
+                console.error('Invalid questions format:', questionsArray);
+                return;
+            }
+            
+            followUpQuestions = questions;
+            const container = document.getElementById('follow-up-questions');
+            container.innerHTML = '';
+            followUpQuestions.forEach((q, qIndex) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'bg-white bg-opacity-10 backdrop-blur rounded-lg p-4 border border-white border-opacity-20';
+                questionDiv.innerHTML = `
+                    <h4 class="text-white font-semibold mb-3">${q.question}</h4>
+                    <div class="flex flex-wrap gap-2">
+                        ${q.answers.map((answer, aIndex) => `
+                            <button onclick="selectAnswer(${qIndex}, ${aIndex}, '${answer.replace(/'/g, "\\'")}')" 
+                                    class="quick-answer-btn bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1 rounded-full border border-white border-opacity-30 text-sm">
+                                ${answer}
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(questionDiv);
+            });
+        }
+
+        async function sendEngineeredPrompt() {
+            showProgress();
+            addTypingIndicator();
+            try {
+                // Show the engineered prompt as a user message in the chat, only if it's not already the last user message
+                const messagesContainer = document.getElementById('chat-messages');
+                const lastMessage = messagesContainer.lastElementChild;
+                if (!lastMessage || !lastMessage.classList.contains('user-message') || lastMessage.textContent.trim() !== engineeredPrompt.trim()) {
+                    // Render with markdown, but do NOT add any introduction text
+                    addMessage(engineeredPrompt, true, true);
+                }
+                // --- Set max_tokens to 3000 for step 4 ---
+                const prevMaxTokens = document.getElementById('max-tokens').value;
+                document.getElementById('max-tokens').value = '3000';
+                const finalResponse = await callOpenAI(engineeredPrompt);
+                document.getElementById('max-tokens').value = prevMaxTokens; // Restore previous value
+                removeTypingIndicator();
+                hideProgress();
+                currentStep = 4;
+                showStep(4);
+                if (finalResponse && finalResponse.trim()) {
+                    // Only process and add to chat if this is a final answer (not JSON/questions/prompt)
+                    processChatResponse(finalResponse);
+                } else {
+                    addMessage('[No response received from AI]', false);
+                }
+            } catch (error) {
+                removeTypingIndicator();
+                hideProgress();
+                addMessage('Error: ' + error.message, false);
+            }
+        }
+
+        async function getFollowUpSuggestions(context) {
+            // Ask the AI for follow-up questions based on the latest context/response
+            const suggestionPrompt = `Based on the following conversation or answer, suggest 3-4 follow-up questions the user might want to ask next. Format your response as a JSON array of strings, e.g. ["question1", "question2", "question3"]:\n\n${context}`;
+            showProgress();
+            try {
+                const response = await callOpenAI(suggestionPrompt);
+                let suggestions = [];
+                try {
+                    // Clean up markdown if present
+                    let clean = response.trim();
+                    if (clean.startsWith('```json')) clean = clean.slice(7);
+                    if (clean.startsWith('```')) clean = clean.slice(3);
+                    if (clean.endsWith('```')) clean = clean.slice(0, -3);
+                    suggestions = JSON.parse(clean);
+                } catch (e) {
+                    // fallback: try to extract array from text
+                    const match = response.match(/\[(.|\n)*\]/);
+                    if (match) suggestions = JSON.parse(match[0]);
+                }
+                renderFollowUpSuggestions(suggestions); // Only render buttons, do NOT post to chat
+                hideProgress();
+            } catch (error) {
+                renderFollowUpSuggestions([]);
+                hideProgress();
+            }
+        }
+
+        function renderFollowUpSuggestions(suggestions) {
+            const container = document.getElementById('follow-up-suggestions');
+            container.innerHTML = '';
+            if (Array.isArray(suggestions) && suggestions.length > 0) {
+                suggestions.forEach((q, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'quick-answer-btn bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1 rounded-full border border-white border-opacity-30 text-sm mb-2';
+                    btn.textContent = q;
+                    btn.onclick = () => handleFollowUpSuggestion(q);
+                    container.appendChild(btn);
+                });
+            }
+        }
+
+        async function handleFollowUpSuggestion(question) {
+            addMessage(question, true);
+            showProgress();
+            addTypingIndicator();
+            try {
+                const response = await callOpenAI(question);
+                removeTypingIndicator();
+                hideProgress();
+                // Show answer and always get new follow-up suggestions based on the latest answer
+                processFollowUpSuggestions(response, true);
+                // Also, get new follow-up suggestions based on the latest answer (for extra robustness)
+                // setTimeout(() => getFollowUpSuggestions(answerPart), 100); // Not needed, handled above
+            } catch (error) {
+                removeTypingIndicator();
+                hideProgress();
+                addMessage('Error: ' + error.message, false);
+            }
+        }
+
+        async function refineEngineeredPrompt() {
+            // When refining, use the engineered prompt as the new context for follow-up questions
+            showProgress();
+            addTypingIndicator();
+            try {
+                const refinePrompt = `Based on this question: "${engineeredPrompt}", generate 3-4 follow-up questions that would help clarify and expand on the topic. For each question, provide 3-4 quick answer options. Do not answer the questions in the engineered prompt. Format your response as JSON like this:\n{\n  "questions": [\n    {\n      "question": "What specific aspect are you most interested in?",\n      "answers": ["Technical details", "General overview", "Step-by-step guide", "Best practices"]\n    }\n  ]\n}`;
+                const response = await callOpenAI(refinePrompt);
+                removeTypingIndicator();
+                hideProgress();
+                // Parse and display follow-up questions
+                const processed = processWizardResponse(response);
+                displayFollowUpQuestions(processed.suggestions);
+                // Move to step 2
+                currentStep = 2;
+                showStep(2);
+            } catch (error) {
+                removeTypingIndicator();
+                hideProgress();
+                addMessage('Error: ' + error.message, false);
+            }
+        }
+
+        function goBack() {
+            if (currentStep === 2) {
+                // Go back to step 1
+                currentStep = 1;
+                showStep(1);
+                // Clear the follow-up questions display
+                document.getElementById('follow-up-questions').innerHTML = '';
+                // Keep the initial question in the input
+            } else if (currentStep === 3) {
+                // Go back to step 2
+                currentStep = 2;
+                showStep(2);
+                // Re-display the follow-up questions
+                if (followUpQuestions.length > 0) {
+                    displayFollowUpQuestions(followUpQuestions);
+                }
+            }
+        }
+
+        function resetWizard() {
+            currentStep = 1;
+            initialQuestion = '';
+            followUpQuestions = [];
+            selectedAnswers = {};
+            engineeredPrompt = ''; // Reset engineered prompt
+            
+            document.getElementById('initial-question').value = '';
+            document.getElementById('follow-up-questions').innerHTML = '';
+            document.getElementById('engineered-prompt-box').innerHTML = ''; // Clear engineered prompt box
+            document.getElementById('follow-up-suggestions').innerHTML = '';
+            showStep(1);
+            clearChat();
+        }
+
+        // Enter key to send initial question
+        document.getElementById('initial-question').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleStep1();
+            }
+        });
+
+        // Helper function to get URL parameters
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(window.location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // Set API key, model, and base URL from URL if present
+        function setApiSettingsFromUrl() {
+            const urlKey = getUrlParameter('key');
+            if (urlKey) {
+                const keyInput = document.getElementById('key');
+                if (keyInput) keyInput.value = urlKey;
+            }
+            const urlModel = getUrlParameter('model');
+            if (urlModel) {
+                const modelInput = document.getElementById('model');
+                if (modelInput) modelInput.value = urlModel;
+            }
+            const urlUrl = getUrlParameter('url');
+            if (urlUrl) {
+                const urlInput = document.getElementById('url');
+                if (urlInput) urlInput.value = urlUrl;
+            }
+        }
+
+        // Add goToFirstPage JS function
+        function goToFirstPage() {
+            resetWizard();
+            showStep(1);
+        }
+    </script>
+
+    <!-- Floating Chat Input Box -->
+    <div id="floating-chat-input" style="position:fixed;bottom:0;left:0;width:100vw;z-index:50;display:none;" class="flex items-center justify-center p-4">
+        <div class="flex items-center w-full max-w-2xl bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1">
+            <input id="message-input" type="text" placeholder="Type a message or use the mic..." class="flex-1 px-4 py-2 bg-transparent text-gray-900 focus:ring-0 focus:outline-none border-none" autocomplete="off" style="box-shadow:none;">
+            <button id="mic-btn" title="Record with mic" class="bg-transparent hover:bg-blue-50 text-blue-600 rounded-full w-10 h-10 flex items-center justify-center focus:outline-none ml-2">
+                <svg id="mic-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18v2m0 0a4 4 0 01-4-4h8a4 4 0 01-4 4zm0 0V6a4 4 0 018 0v6a4 4 0 01-8 0z" /></svg>
+            </button>
+            <button id="send-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-full transition-colors duration-200 flex items-center ml-2 shadow-none">
+                Send
+            </button>
+        </div>
+    </div>
+
+    <script>
+    // Floating chat input event listeners
+    document.getElementById('send-btn').onclick = sendMessage;
+    document.getElementById('message-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // Web Speech API for mic transcription
+    let recognition;
+    let recognizing = false;
+    const micBtn = document.getElementById('mic-btn');
+    const micIcon = document.getElementById('mic-icon');
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = function() {
+            recognizing = true;
+            micBtn.classList.add('bg-green-600');
+        };
+        recognition.onend = function() {
+            recognizing = false;
+            micBtn.classList.remove('bg-green-600');
+        };
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            document.getElementById('message-input').value = transcript;
+        };
+        micBtn.onclick = function() {
+            if (recognizing) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        };
+    } else {
+        micBtn.disabled = true;
+        micBtn.title = 'Speech recognition not supported in this browser';
+    }
+    </script>
+</body>
+</html> 
