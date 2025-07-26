@@ -20,6 +20,9 @@ https://rawcdn.githack.com/milankmezic/AIPromptEngineer/0e730672df7d033dc85c47b4
 - **Auto-focus:** Input boxes automatically receive focus for seamless typing experience.
 - **Clickable Header:** Click the header with robot emoji to return to the first page anytime.
 
+## Support us - become a sponsor
+- https://github.com/sponsors/milankmezic
+
 ## Getting Started
 
 1. **Clone the repository:**
