@@ -8,6 +8,9 @@ https://rawcdn.githack.com/milankmezic/AIPromptEngineer/0e730672df7d033dc85c47b4
 ## Features
 
 - **Wizard-based Prompt Engineering:** Step-by-step interface to clarify your intent and build detailed prompts.
+- **Smart Placeholder Detection:** Automatically detects `[variable]` placeholders in your questions and generates contextual options to fill them.
+- **Dynamic Question Generation:** For each placeholder, the AI generates relevant questions and options (e.g., "What country?" → ["United States", "France", "Japan", etc.]).
+- **Custom Input Options:** "✏️ Other" button allows users to enter custom values for any question or placeholder.
 - **OpenAI & Gemini API Support:** Easily configure your API key, model, and endpoint.
 - **Parameter Tuning:** Adjust temperature, max tokens, top-p, frequency/presence penalties, and more.
 - **Dark Mode:** Toggle between light and dark themes.
@@ -37,6 +40,8 @@ https://rawcdn.githack.com/milankmezic/AIPromptEngineer/0e730672df7d033dc85c47b4
 
 4. **Start Engineering Prompts:**
    - Click "Get Started" and follow the wizard to build your prompt.
+   - **Using Placeholders:** Enter questions with `[variable]` placeholders (e.g., "What is the capital of [country]?") and the system will automatically generate options to fill them.
+   - **Custom Input:** Use the "✏️ Other" button to enter custom values for any question or placeholder.
    - Review, refine, and send prompts to the AI.
    - Use the chat interface for follow-up questions and iterative refinement.
    - Click on automatically generated follow-up suggestions to continue the conversation.
@@ -56,8 +61,41 @@ https://yourdomain.com/index.html?key=YOUR_API_KEY&model=gpt-4&url=https://api.o
 
 When you open the app with these parameters, the corresponding fields will be pre-filled automatically.
 
+## Using Placeholders
+
+The AI Prompt Engineer now supports smart placeholder detection and replacement. Here's how it works:
+
+### **Placeholder Syntax**
+Use square brackets to indicate variables in your questions:
+- `"What is the capital of [country]?"`
+- `"Tell me about [topic] in [year]"`
+- `"How do I [action] with [tool]?"`
+
+### **How It Works**
+1. **Detection:** The system automatically detects `[variable]` patterns in your question
+2. **Question Generation:** For each placeholder, the AI generates a contextual question
+3. **Options Display:** You'll see relevant options to choose from (e.g., countries, topics, years)
+4. **Custom Input:** Use the "✏️ Other" button to enter your own custom value
+5. **Automatic Replacement:** Selected values automatically replace the placeholders
+6. **Continue to Refinement:** After filling all placeholders, proceed to the normal refinement flow
+
+### **Example Flow**
+**Input:** `"What is the capital of [country]?"`
+
+**System Response:**
+- Detects `[country]` placeholder
+- Generates: "Which country are you interested in exploring?"
+- Shows options: ["United States", "France", "Japan", "Brazil", "Australia", "India"]
+- User selects "France"
+- Question becomes: "What is the capital of France?"
+- Continues to normal refinement screen
+
 ## Recent Updates
 
+- **Smart Placeholder Detection:** Automatically detects and handles `[variable]` placeholders in questions
+- **Dynamic Question Generation:** AI generates contextual questions and options for each placeholder
+- **Custom Input Feature:** "✏️ Other" button allows users to enter custom values for any question
+- **Enhanced Navigation:** Improved step-by-step flow with proper button management
 - **Automatic Follow-up Suggestions:** The AI now generates contextual follow-up actions after each response
 - **Enhanced UX:** Auto-focus on input fields and clickable header navigation
 - **Improved Defaults:** Set to use `google/gemini-2.5-flash-lite` by default
@@ -71,6 +109,8 @@ When you open the app with these parameters, the corresponding fields will be pr
 ## Demo
 
 🎥 **Watch the demo video:** [AI Prompt Engineer Demo](https://youtu.be/0K5Fi08m1ds)
+
+🔗 **Try it live:** [AI Prompt Engineer](https://rawcdn.githack.com/milankmezic/AIPromptEngineer/0e730672df7d033dc85c47b434fefcc440599cb8/index.html)
 
 ## Requirements
 - Modern web browser (Chrome, Edge, Firefox, Safari)

@@ -125,6 +125,11 @@
             background-color: #2563eb;
             border-color: #2563eb;
         }
+        .quick-answer-btn.other-selected {
+            background-color: #059669 !important;
+            border-color: #059669 !important;
+            color: white;
+        }
         
         /* Markdown styling for AI responses */
         .ai-message h1, .ai-message h2, .ai-message h3, .ai-message h4, .ai-message h5, .ai-message h6 {
@@ -634,6 +639,8 @@
         let followUpQuestions = [];
         let selectedAnswers = {};
         let engineeredPrompt = '';
+        let placeholderData = null;
+        let placeholderAnswers = {};
 
         function addMessage(content, isUser = true, useMarkdown = false) {
             const messagesContainer = document.getElementById('chat-messages');
@@ -1017,8 +1024,246 @@
             if (!question) return;
             initialQuestion = question;
             localStorage.setItem('step1', JSON.stringify({ initialQuestion }));
+            
+            // Check for placeholders in the question
+            const placeholders = detectPlaceholders(question);
+            if (placeholders.length > 0) {
+                // Handle placeholders first
+                handlePlaceholders(placeholders, question);
+            } else {
+                // No placeholders, proceed with normal flow
+                proceedToFollowUpQuestions(question);
+            }
+        }
+
+        // Detect placeholders in the question
+        function detectPlaceholders(question) {
+            const placeholderRegex = /\[([^\]]+)\]/g;
+            const placeholders = [];
+            let match;
+            
+            while ((match = placeholderRegex.exec(question)) !== null) {
+                placeholders.push({
+                    placeholder: match[0], // e.g., [country]
+                    variable: match[1],    // e.g., country
+                    index: match.index
+                });
+            }
+            
+            return placeholders;
+        }
+
+        // Handle placeholders by generating questions for each
+        async function handlePlaceholders(placeholders, originalQuestion) {
             showProgress();
-            // Show typing indicator in a temporary way
+            const tempIndicator = document.createElement('div');
+            tempIndicator.className = 'text-center text-white opacity-60 mb-4';
+            tempIndicator.textContent = 'Generating placeholder questions...';
+            document.getElementById('step-1-input').appendChild(tempIndicator);
+            
+            try {
+                const placeholderQuestions = [];
+                
+                for (const placeholder of placeholders) {
+                    const question = await generatePlaceholderQuestion(placeholder.variable, originalQuestion);
+                    placeholderQuestions.push(question);
+                }
+                
+                tempIndicator.remove();
+                hideProgress();
+                
+                // Store placeholder data for later use
+                placeholderData = {
+                    placeholders: placeholders,
+                    questions: placeholderQuestions,
+                    originalQuestion: originalQuestion
+                };
+                
+                // Show placeholder questions
+                showPlaceholderQuestions(placeholderQuestions);
+                
+            } catch (error) {
+                tempIndicator.remove();
+                hideProgress();
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'text-center text-red-400 mb-4';
+                errorDiv.textContent = 'Error: ' + error.message;
+                document.getElementById('step-1-input').appendChild(errorDiv);
+                setTimeout(() => errorDiv.remove(), 5000);
+            }
+        }
+
+        // Generate a question for a specific placeholder
+        async function generatePlaceholderQuestion(variable, originalQuestion) {
+            const prompt = `Given the variable "${variable}" from the question: "${originalQuestion}", generate a question to ask the user to specify what they want for this variable. Also provide 4-6 relevant options as answers. Format your response as JSON like this:
+{
+  "question": "What country do you want to know the capital of?",
+  "answers": ["United States", "France", "Japan", "Brazil", "Australia", "India"]
+}`;
+            
+            const response = await callOpenAI(prompt);
+            try {
+                // Clean up markdown if present
+                let clean = response.trim();
+                if (clean.startsWith('```json')) clean = clean.slice(7);
+                if (clean.startsWith('```')) clean = clean.slice(3);
+                if (clean.endsWith('```')) clean = clean.slice(0, -3);
+                
+                return JSON.parse(clean);
+            } catch (e) {
+                console.error('Failed to parse placeholder question JSON:', e, 'Response:', response);
+                // Fallback if JSON parsing fails
+                return {
+                    question: `What ${variable} do you want to specify?`,
+                    answers: ["Option 1", "Option 2", "Option 3", "Option 4"]
+                };
+            }
+        }
+
+        // Show placeholder questions to the user
+        function showPlaceholderQuestions(questions) {
+            const container = document.getElementById('follow-up-questions');
+            container.innerHTML = '';
+            
+            questions.forEach((q, qIndex) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'bg-white bg-opacity-10 backdrop-blur rounded-lg p-4 border border-white border-opacity-20';
+                questionDiv.innerHTML = `
+                    <h4 class="text-white font-semibold mb-3">${q.question}</h4>
+                    <div class="flex flex-wrap gap-2">
+                        ${q.answers.map((answer, aIndex) => `
+                            <button onclick="selectPlaceholderAnswer(${qIndex}, ${aIndex}, '${answer.replace(/'/g, "\\'")}')" 
+                                    class="quick-answer-btn bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1 rounded-full border border-white border-opacity-30 text-sm">
+                                ${answer}
+                            </button>
+                        `).join('')}
+                        <button onclick="openPlaceholderCustomInput(${qIndex})" 
+                                class="quick-answer-btn bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1 rounded-full border border-white border-opacity-30 text-sm">
+                            ✏️ Other
+                        </button>
+                    </div>
+                `;
+                container.appendChild(questionDiv);
+            });
+            
+            // Hide the default step 2 navigation buttons
+            const step2Nav = document.querySelector('#step-2-input .flex.justify-center.space-x-4');
+            if (step2Nav) {
+                step2Nav.style.display = 'none';
+            }
+            
+            // Add placeholder-specific navigation buttons
+            const navDiv = document.createElement('div');
+            navDiv.className = 'flex justify-center space-x-4 mt-6';
+            navDiv.innerHTML = `
+                <button onclick="goBack()" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200">
+                    ← Back
+                </button>
+                <button onclick="proceedWithPlaceholders()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200">
+                    Continue to Refinement →
+                </button>
+            `;
+            container.appendChild(navDiv);
+            
+            currentStep = 1.5; // Special step for placeholders
+            showStep(2); // Show the step 2 container
+        }
+
+        // Handle placeholder answer selection
+        function selectPlaceholderAnswer(questionIndex, answerIndex, answer) {
+            if (!placeholderAnswers) placeholderAnswers = {};
+            if (!placeholderAnswers[questionIndex]) {
+                placeholderAnswers[questionIndex] = [];
+            }
+            
+            const answerArray = placeholderAnswers[questionIndex];
+            const answerIndexInArray = answerArray.indexOf(answer);
+            
+            if (answerIndexInArray === -1) {
+                answerArray.push(answer);
+            } else {
+                answerArray.splice(answerIndexInArray, 1);
+            }
+            
+            // Update button appearance
+            const questionDiv = document.getElementById('follow-up-questions').children[questionIndex];
+            const buttons = questionDiv.querySelectorAll('.quick-answer-btn');
+            
+            buttons.forEach((btn, index) => {
+                btn.classList.remove('selected');
+                if (answerArray.includes(btn.textContent.trim())) {
+                    btn.classList.add('selected');
+                }
+            });
+        }
+
+        // Handle custom input for placeholders
+        function openPlaceholderCustomInput(questionIndex) {
+            const question = placeholderData.questions[questionIndex].question;
+            const questionDiv = document.getElementById('follow-up-questions').children[questionIndex];
+            const buttons = questionDiv.querySelectorAll('.quick-answer-btn');
+            const customButton = buttons[buttons.length - 1];
+            
+            const existingCustomAnswer = placeholderAnswers && placeholderAnswers[questionIndex] ? 
+                placeholderAnswers[questionIndex].find(answer => answer.startsWith('CUSTOM:')) : null;
+            
+            let promptText = `Enter your other answer for: "${question}"`;
+            if (existingCustomAnswer) {
+                promptText = `Current other answer: "${existingCustomAnswer.replace('CUSTOM:', '')}"\n\nEnter new other answer (or leave empty to remove):`;
+            }
+            
+            const customAnswer = prompt(promptText);
+            
+            if (customAnswer === null) return;
+            
+            if (!placeholderAnswers) placeholderAnswers = {};
+            if (!placeholderAnswers[questionIndex]) {
+                placeholderAnswers[questionIndex] = [];
+            }
+            
+            placeholderAnswers[questionIndex] = placeholderAnswers[questionIndex].filter(answer => !answer.startsWith('CUSTOM:'));
+            
+            if (customAnswer && customAnswer.trim()) {
+                placeholderAnswers[questionIndex].push(`CUSTOM:${customAnswer.trim()}`);
+                customButton.classList.add('other-selected');
+                customButton.textContent = `✏️ Other: ${customAnswer.trim().substring(0, 20)}${customAnswer.trim().length > 20 ? '...' : ''}`;
+            } else {
+                customButton.classList.remove('other-selected');
+                customButton.textContent = '✏️ Other';
+            }
+        }
+
+        // Proceed with placeholder answers and continue to normal flow
+        function proceedWithPlaceholders() {
+            // Replace placeholders in the original question
+            let processedQuestion = placeholderData.originalQuestion;
+            
+            placeholderData.placeholders.forEach((placeholder, index) => {
+                const answers = placeholderAnswers && placeholderAnswers[index] ? placeholderAnswers[index] : [];
+                if (answers.length > 0) {
+                    const answer = answers[0]; // Take the first selected answer
+                    const finalAnswer = answer.startsWith('CUSTOM:') ? answer.replace('CUSTOM:', '') : answer;
+                    processedQuestion = processedQuestion.replace(placeholder.placeholder, finalAnswer);
+                }
+            });
+            
+            // Update the initial question with the processed version
+            initialQuestion = processedQuestion;
+            localStorage.setItem('step1', JSON.stringify({ initialQuestion }));
+            
+            // Show the default step 2 navigation buttons again
+            const step2Nav = document.querySelector('#step-2-input .flex.justify-center.space-x-4');
+            if (step2Nav) {
+                step2Nav.style.display = 'flex';
+            }
+            
+            // Proceed to normal follow-up questions
+            proceedToFollowUpQuestions(processedQuestion);
+        }
+
+        // Proceed to normal follow-up questions flow
+        function proceedToFollowUpQuestions(question) {
+            showProgress();
             const tempIndicator = document.createElement('div');
             tempIndicator.className = 'text-center text-white opacity-60 mb-4';
             tempIndicator.textContent = 'Generating follow-up questions...';
@@ -1075,10 +1320,21 @@
                                 ${answer}
                             </button>
                         `).join('')}
+                        <button onclick="openCustomInput(${qIndex})" 
+                                class="quick-answer-btn bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1 rounded-full border border-white border-opacity-30 text-sm">
+                            ✏️ Other
+                        </button>
                     </div>
                 `;
                 container.appendChild(questionDiv);
             });
+            
+            // Ensure the default step 2 navigation buttons are visible
+            const step2Nav = document.querySelector('#step-2-input .flex.justify-center.space-x-4');
+            if (step2Nav) {
+                step2Nav.style.display = 'flex';
+            }
+            
             currentStep = 2;
             showStep(2);
         }
@@ -1090,7 +1346,14 @@
                 const question = followUpQuestions[key].question;
                 const answers = selectedAnswers[key];
                 if (answers && answers.length > 0) {
-                    comprehensivePrompt += `Q: ${question}\nA: ${answers.join(', ')}\n\n`;
+                    // Process answers to handle custom answers
+                    const processedAnswers = answers.map(answer => {
+                        if (answer.startsWith('CUSTOM:')) {
+                            return answer.replace('CUSTOM:', ''); // Remove the CUSTOM: prefix
+                        }
+                        return answer;
+                    });
+                    comprehensivePrompt += `Q: ${question}\nA: ${processedAnswers.join(', ')}\n\n`;
                 }
             });
             comprehensivePrompt += `Based on the original question and these clarifications, provide a comprehensive and detailed response.`;
@@ -1199,10 +1462,20 @@
                                 ${answer}
                             </button>
                         `).join('')}
+                        <button onclick="openCustomInput(${qIndex})" 
+                                class="quick-answer-btn bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1 rounded-full border border-white border-opacity-30 text-sm">
+                            ✏️ Other
+                        </button>
                     </div>
                 `;
                 container.appendChild(questionDiv);
             });
+            
+            // Ensure the default step 2 navigation buttons are visible
+            const step2Nav = document.querySelector('#step-2-input .flex.justify-center.space-x-4');
+            if (step2Nav) {
+                step2Nav.style.display = 'flex';
+            }
         }
 
         async function sendEngineeredPrompt() {
@@ -1345,7 +1618,22 @@
         }
 
         function goBack() {
-            if (currentStep === 2) {
+            if (currentStep === 1.5) {
+                // Go back from placeholder step to step 1
+                currentStep = 1;
+                showStep(1);
+                // Clear the follow-up questions display
+                document.getElementById('follow-up-questions').innerHTML = '';
+                // Reset placeholder data
+                placeholderData = null;
+                placeholderAnswers = {};
+                // Show the default step 2 navigation buttons again
+                const step2Nav = document.querySelector('#step-2-input .flex.justify-center.space-x-4');
+                if (step2Nav) {
+                    step2Nav.style.display = 'flex';
+                }
+                // Keep the initial question in the input
+            } else if (currentStep === 2) {
                 // Go back to step 1
                 currentStep = 1;
                 showStep(1);
@@ -1369,6 +1657,8 @@
             followUpQuestions = [];
             selectedAnswers = {};
             engineeredPrompt = ''; // Reset engineered prompt
+            placeholderData = null;
+            placeholderAnswers = {};
             
             document.getElementById('initial-question').value = '';
             document.getElementById('follow-up-questions').innerHTML = '';
@@ -1417,6 +1707,51 @@
         function goToFirstPage() {
             resetWizard();
             showStep(1);
+        }
+
+        // Custom input functionality for follow-up questions
+        function openCustomInput(questionIndex) {
+            const question = followUpQuestions[questionIndex].question;
+            const questionDiv = document.getElementById('follow-up-questions').children[questionIndex];
+            const buttons = questionDiv.querySelectorAll('.quick-answer-btn');
+            const customButton = buttons[buttons.length - 1]; // The custom button
+            
+            // Check if custom answer already exists
+            const existingCustomAnswer = selectedAnswers[questionIndex] ? 
+                selectedAnswers[questionIndex].find(answer => answer.startsWith('CUSTOM:')) : null;
+            
+            let promptText = `Enter your other answer for: "${question}"`;
+            if (existingCustomAnswer) {
+                promptText = `Current other answer: "${existingCustomAnswer.replace('CUSTOM:', '')}"\n\nEnter new other answer (or leave empty to remove):`;
+            }
+            
+            const customAnswer = prompt(promptText);
+            
+            if (customAnswer === null) {
+                // User cancelled
+                return;
+            }
+            
+            // Initialize array if it doesn't exist
+            if (!selectedAnswers[questionIndex]) {
+                selectedAnswers[questionIndex] = [];
+            }
+            
+            // Remove existing custom answer if any
+            selectedAnswers[questionIndex] = selectedAnswers[questionIndex].filter(answer => !answer.startsWith('CUSTOM:'));
+            
+            if (customAnswer && customAnswer.trim()) {
+                // Add the new custom answer with a prefix to identify it
+                selectedAnswers[questionIndex].push(`CUSTOM:${customAnswer.trim()}`);
+                
+                // Update the UI to show the custom answer is selected
+                customButton.classList.add('other-selected');
+                customButton.textContent = `✏️ Other: ${customAnswer.trim().substring(0, 20)}${customAnswer.trim().length > 20 ? '...' : ''}`;
+            } else {
+                // User entered empty string, remove custom answer
+                customButton.classList.remove('other-selected');
+                customButton.textContent = '✏️ Other';
+            }
         }
     </script>
 
