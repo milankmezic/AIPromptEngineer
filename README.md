@@ -1,5 +1,7 @@
 # AI Prompt Engineer
 
+[![Watch on YouTube](https://img.youtube.com/vi/0K5Fi08m1ds/0.jpg)](https://www.youtube.com/watch?v=0K5Fi08m1ds)
+
 AI Prompt Engineer is a modern web-based tool for building, refining, and engineering prompts for large language models (LLMs) like OpenAI GPT and Google Gemini. It provides a guided, wizard-style interface to help users craft comprehensive prompts, experiment with model parameters, and interact with AI in a structured way.
 
 # Demo
@@ -20,6 +22,9 @@ https://rawcdn.githack.com/milankmezic/AIPromptEngineer/0e730672df7d033dc85c47b4
 - **Automatic Follow-up Suggestions:** After each AI response, the system automatically generates relevant follow-up actions you can click to continue the conversation.
 - **Auto-focus:** Input boxes automatically receive focus for seamless typing experience.
 - **Clickable Header:** Click the header with robot emoji to return to the first page anytime.
+
+## Support us - become a sponsor
+- https://github.com/sponsors/milankmezic
 
 ## Getting Started
 
