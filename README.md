@@ -5,7 +5,7 @@
 AI Prompt Engineer is a modern web-based tool for building, refining, and engineering prompts for large language models (LLMs) like OpenAI GPT and Google Gemini. It provides a guided, wizard-style interface to help users craft comprehensive prompts, experiment with model parameters, and interact with AI in a structured way.
 
 # Demo
-https://rawcdn.githack.com/milankmezic/AIPromptEngineer/0e730672df7d033dc85c47b434fefcc440599cb8/index.html
+https://nextautomatica.com/chat/index.html
 
 ## Features
 
@@ -22,6 +22,11 @@ https://rawcdn.githack.com/milankmezic/AIPromptEngineer/0e730672df7d033dc85c47b4
 - **Automatic Follow-up Suggestions:** After each AI response, the system automatically generates relevant follow-up actions you can click to continue the conversation.
 - **Auto-focus:** Input boxes automatically receive focus for seamless typing experience.
 - **Clickable Header:** Click the header with robot emoji to return to the first page anytime.
+- **Direct Send Option:** Choose between "Refine" (wizard flow) or "Send" (direct to AI) for quick responses.
+- **URL Parameter Support:** Load questions and settings via URL parameters (`q`, `prompturl`, `key`, `model`, `url`).
+- **Dynamic Parameter Dialogs:** Interactive dialogs for `[parameter]` placeholders in URL-loaded content.
+- **Shareable Links:** Copy button generates shareable URLs with your current question.
+- **Enhanced Clipboard Support:** Robust copy functionality with fallback methods for all browsers.
 
 ## Support us - become a sponsor
 - https://github.com/sponsors/milankmezic
@@ -51,20 +56,45 @@ https://rawcdn.githack.com/milankmezic/AIPromptEngineer/0e730672df7d033dc85c47b4
    - Use the chat interface for follow-up questions and iterative refinement.
    - Click on automatically generated follow-up suggestions to continue the conversation.
 
-## Parameters and URL Prefill
+## URL Parameters and Prefill
 
-You can prefill the API key, model, and base URL fields by passing them as URL parameters when opening the app. This is useful for sharing links or automating configuration.
+You can prefill various settings and content by passing URL parameters when opening the app. This is useful for sharing links or automating configuration.
 
+### **Basic Parameters**
 - `key`: Your API key (e.g., OpenAI or Gemini)
 - `model`: The model name (e.g., `gpt-4`, `google/gemini-2.5-flash-lite`)
 - `url`: The base API URL (e.g., `https://api.openai.com/v1`)
 
-**Example:**
+### **Content Parameters**
+- `q`: Preload a question into the textarea (supports `[parameter]` placeholders)
+- `prompturl`: Load content from an external URL (supports `[parameter]` placeholders)
+
+### **Examples:**
+
+**Basic Configuration:**
 ```
 https://yourdomain.com/index.html?key=YOUR_API_KEY&model=gpt-4&url=https://api.openai.com/v1
 ```
 
-When you open the app with these parameters, the corresponding fields will be pre-filled automatically.
+**With Preloaded Question:**
+```
+https://yourdomain.com/index.html?q=What%20is%20the%20capital%20of%20[country]?
+```
+
+**With External Content:**
+```
+https://yourdomain.com/index.html?prompturl=https://example.com/prompt.txt
+```
+
+**Combined Parameters:**
+```
+https://yourdomain.com/index.html?key=YOUR_API_KEY&model=gpt-4&q=Tell%20me%20about%20[topic]%20in%20[year]
+```
+
+### **Parameter Placeholders**
+Both `q` and `prompturl` parameters support `[parameter]` placeholders. When the app loads, it will show dialogs to fill these placeholders with user input.
+
+When you open the app with these parameters, the corresponding fields and content will be pre-filled automatically.
 
 ## Using Placeholders
 
@@ -97,6 +127,17 @@ Use square brackets to indicate variables in your questions:
 
 ## Recent Updates
 
+### **v2.0 - Major Feature Release**
+- **Direct Send Option:** Choose between "Refine" (wizard flow) or "Send" (direct to AI) for quick responses
+- **URL Parameter Support:** Load questions and settings via URL parameters (`q`, `prompturl`, `key`, `model`, `url`)
+- **Dynamic Parameter Dialogs:** Interactive dialogs for `[parameter]` placeholders in URL-loaded content
+- **Shareable Links:** Copy button generates shareable URLs with your current question
+- **Enhanced Clipboard Support:** Robust copy functionality with fallback methods for all browsers
+- **localStorage Persistence:** URL-loaded content is saved to localStorage for persistence
+- **Improved Error Handling:** Better handling of clipboard operations and parameter processing
+- **Streamlined Interface:** Clean button layout with text-only design
+
+### **Previous Updates**
 - **Smart Placeholder Detection:** Automatically detects and handles `[variable]` placeholders in questions
 - **Dynamic Question Generation:** AI generates contextual questions and options for each placeholder
 - **Custom Input Feature:** "✏️ Other" button allows users to enter custom values for any question
@@ -115,7 +156,7 @@ Use square brackets to indicate variables in your questions:
 
 🎥 **Watch the demo video:** [AI Prompt Engineer Demo](https://youtu.be/0K5Fi08m1ds)
 
-🔗 **Try it live:** [AI Prompt Engineer](https://rawcdn.githack.com/milankmezic/AIPromptEngineer/0e730672df7d033dc85c47b434fefcc440599cb8/index.html)
+🔗 **Try it live:** [AI Prompt Engineer](https://nextautomatica.com/chat/index.html)
 
 ## Requirements
 - Modern web browser (Chrome, Edge, Firefox, Safari)
