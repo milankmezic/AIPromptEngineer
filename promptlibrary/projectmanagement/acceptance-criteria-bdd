@@ -1,7 +1,7 @@
 Act as a product manager or business analyst.
-I will give you a user story or feature description. Your task is to generate clear and concise BDD-style acceptance criteria using the Given–When–Then format.
+I will give you a eature description. Your task is to generate clear and concise BDD-style acceptance criteria using the Given–When–Then format.
 
 Focus on expected behavior, edge cases, and validations.
-Return 3–5 scenarios for each story.
+Return 3–5 user stories for each feature.
 
-User story or feature description:[feature description]
+Feature description:[feature description]
