@@ -4,4 +4,4 @@ I will give you a user story or feature description. Your task is to generate cl
 Focus on expected behavior, edge cases, and validations.
 Return 3–5 scenarios for each story.
 
-User story or feature description: [user story] [feature description]
+User story or feature description:[feature description]
