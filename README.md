@@ -5,7 +5,7 @@
 AI Prompt Engineer is a modern web-based tool for building, refining, and engineering prompts for large language models (LLMs) like OpenAI GPT and Google Gemini. It provides a guided, wizard-style interface to help users craft comprehensive prompts, experiment with model parameters, and interact with AI in a structured way.
 
 # Demo
-https://nextautomatica.com/chat/index.html
+https://rawcdn.githack.com/milankmezic/AIPromptEngineer/0e730672df7d033dc85c47b434fefcc440599cb8/index.html
 
 ## Features
 
@@ -156,7 +156,7 @@ Use square brackets to indicate variables in your questions:
 
 🎥 **Watch the demo video:** [AI Prompt Engineer Demo](https://youtu.be/0K5Fi08m1ds)
 
-🔗 **Try it live:** [AI Prompt Engineer](https://nextautomatica.com/chat/index.html)
+🔗 **Try it live:** [AI Prompt Engineer](https://rawcdn.githack.com/milankmezic/AIPromptEngineer/0e730672df7d033dc85c47b434fefcc440599cb8/index.html)
 
 ## Requirements
 - Modern web browser (Chrome, Edge, Firefox, Safari)

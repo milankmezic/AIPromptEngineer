@@ -383,13 +383,28 @@
                                         class="w-full px-6 py-4 text-lg bg-white bg-opacity-95 text-gray-900 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none resize-none shadow-lg"
                                         style="min-height: 120px;"
                                     ></textarea>
+                                </div>
+                                <div class="flex justify-center space-x-4 mt-6">
+                                    <button 
+                                        onclick="copyCurrentUrl()" 
+                                        class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+                                        title="Copy current URL with question"
+                                    >
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                        </svg>
+                                    </button>
                                     <button 
                                         onclick="handleStep1()" 
-                                        class="absolute bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-12 h-12 flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
                                     >
-                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                                        </svg>
+                                        Refine
+                                    </button>
+                                    <button 
+                                        onclick="handleDirectSend()" 
+                                        class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+                                    >
+                                        Send
                                     </button>
                                 </div>
                             </div>
@@ -552,6 +567,13 @@
                 }
                 if (settings.initialContext !== undefined) document.getElementById('initial-question').value = settings.initialContext;
             }
+            
+            // Check for q parameter after localStorage is loaded - q parameter takes priority
+            const questionParam = getUrlParameter('q');
+            if (questionParam) {
+                // Store it for processing after main screen is shown (to avoid dialogs on splash screen)
+                window.pendingQParam = decodeURIComponent(questionParam);
+            }
         }
 
         // Screen navigation
@@ -568,6 +590,18 @@
                 const initialQuestionInput = document.getElementById('initial-question');
                 if (initialQuestionInput) {
                     initialQuestionInput.focus();
+                }
+                
+                // Process pending prompturl after main screen is shown
+                if (window.pendingPromptUrl) {
+                    loadPromptFromUrl(window.pendingPromptUrl);
+                    window.pendingPromptUrl = null; // Clear the pending URL
+                }
+                
+                // Process pending q parameter after main screen is shown
+                if (window.pendingQParam) {
+                    processQParameter(window.pendingQParam);
+                    window.pendingQParam = null; // Clear the pending parameter
                 }
             }, 100);
         }
@@ -848,8 +882,26 @@
         }
 
         function clearChat() {
-            // Reset wizard to first page and clear chat
-            resetWizard();
+            // Clear chat messages
+            const chatMessages = document.getElementById('chat-messages');
+            if (chatMessages) {
+                chatMessages.innerHTML = '';
+            }
+            
+            // Reset wizard to first page
+            currentStep = 1;
+            initialQuestion = '';
+            followUpQuestions = [];
+            selectedAnswers = {};
+            engineeredPrompt = '';
+            placeholderData = null;
+            placeholderAnswers = {};
+            
+            document.getElementById('initial-question').value = '';
+            document.getElementById('follow-up-questions').innerHTML = '';
+            document.getElementById('engineered-prompt-box').innerHTML = '';
+            document.getElementById('follow-up-suggestions').innerHTML = '';
+            showStep(1);
         }
 
 
@@ -1033,6 +1085,54 @@
             } else {
                 // No placeholders, proceed with normal flow
                 proceedToFollowUpQuestions(question);
+            }
+        }
+
+        // Direct Send: Skip to step 4 and send question directly to AI
+        async function handleDirectSend() {
+            const question = document.getElementById('initial-question').value.trim();
+            if (!question) {
+                alert('Please enter a question first.');
+                return;
+            }
+            
+            // Set the question as the engineered prompt
+            engineeredPrompt = question;
+            
+            // Show progress and typing indicator
+            showProgress();
+            addTypingIndicator();
+            
+            try {
+                // Show the question as a user message in the chat
+                addMessage(question, true);
+                
+                // Set max_tokens to 3000 for direct send
+                const prevMaxTokens = document.getElementById('max-tokens').value;
+                document.getElementById('max-tokens').value = '3000';
+                
+                // Send the question directly to AI
+                const response = await callOpenAI(question);
+                
+                // Restore previous max_tokens value
+                document.getElementById('max-tokens').value = prevMaxTokens;
+                
+                removeTypingIndicator();
+                hideProgress();
+                
+                // Move to step 4 and show the response
+                currentStep = 4;
+                showStep(4);
+                
+                if (response && response.trim()) {
+                    processChatResponse(response);
+                } else {
+                    addMessage('[No response received from AI]', false);
+                }
+            } catch (error) {
+                removeTypingIndicator();
+                hideProgress();
+                addMessage('Error: ' + error.message, false);
             }
         }
 
@@ -1665,7 +1765,6 @@
             document.getElementById('engineered-prompt-box').innerHTML = ''; // Clear engineered prompt box
             document.getElementById('follow-up-suggestions').innerHTML = '';
             showStep(1);
-            clearChat();
         }
 
         // Enter key to send initial question
@@ -1700,6 +1799,200 @@
             if (urlUrl) {
                 const urlInput = document.getElementById('url');
                 if (urlInput) urlInput.value = urlUrl;
+            }
+            
+            // Store prompturl for later processing (after splash screen)
+            const promptUrl = getUrlParameter('prompturl');
+            if (promptUrl) {
+                // Store it globally to process after splash screen
+                window.pendingPromptUrl = promptUrl;
+            }
+        }
+        
+        // Track if prompturl has been processed to avoid duplicate dialogs
+        let promptUrlProcessed = false;
+        
+        // Process q parameter with placeholders
+        function processQParameter(content) {
+            // Check for [parameter] placeholders in the content
+            const placeholderRegex = /\[([^\]]+)\]/g;
+            const placeholders = [];
+            let match;
+            
+            while ((match = placeholderRegex.exec(content)) !== null) {
+                placeholders.push({
+                    placeholder: match[0], // e.g., [country]
+                    variable: match[1],    // e.g., country
+                    index: match.index
+                });
+            }
+            
+            let processedContent = content;
+            
+            // If there are placeholders, show dialog for each one
+            if (placeholders.length > 0) {
+                for (const placeholder of placeholders) {
+                    const userInput = prompt(`Please enter a value for "${placeholder.variable}":`);
+                    if (userInput !== null) {
+                        processedContent = processedContent.replace(placeholder.placeholder, userInput);
+                    } else {
+                        // User cancelled, keep the placeholder
+                        console.log('User cancelled parameter input for:', placeholder.variable);
+                    }
+                }
+            }
+            
+            // Set the processed content in the initial question textarea
+            const initialQuestionInput = document.getElementById('initial-question');
+            if (initialQuestionInput) {
+                initialQuestionInput.value = processedContent;
+                // Save to localStorage so it persists
+                saveSettings();
+            }
+        }
+        
+        // Copy current URL with question parameter
+        function copyCurrentUrl() {
+            const question = document.getElementById('initial-question').value.trim();
+            if (!question) {
+                alert('Please enter a question first before copying the URL.');
+                return;
+            }
+            
+            // Create the URL with q parameter
+            const baseUrl = window.location.origin + window.location.pathname;
+            const urlWithQuestion = `${baseUrl}?q=${encodeURIComponent(question)}`;
+            
+            // Get the button element
+            const button = event.target.closest('button');
+            
+            // Try modern clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(urlWithQuestion).then(() => {
+                    showCopySuccess(button);
+                }).catch(err => {
+                    console.error('Modern clipboard API failed:', err);
+                    // Fallback to old method
+                    fallbackCopyToClipboard(urlWithQuestion, button);
+                });
+            } else {
+                // Fallback for older browsers
+                fallbackCopyToClipboard(urlWithQuestion, button);
+            }
+        }
+        
+        // Fallback copy method for older browsers or when clipboard API fails
+        function fallbackCopyToClipboard(text, button) {
+            try {
+                // Create a temporary textarea element
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                if (successful) {
+                    showCopySuccess(button);
+                } else {
+                    showCopyError(text, button);
+                }
+            } catch (err) {
+                console.error('Fallback copy failed:', err);
+                showCopyError(text, button);
+            }
+        }
+        
+        // Show success feedback
+        function showCopySuccess(button) {
+            const originalHTML = button.innerHTML;
+            button.innerHTML = `
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            `;
+            button.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+            button.classList.add('bg-green-600');
+            
+            // Reset button after 2 seconds
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.classList.remove('bg-green-600');
+                button.classList.add('bg-gray-600', 'hover:bg-gray-700');
+            }, 2000);
+        }
+        
+        // Show error and provide manual copy option
+        function showCopyError(text, button) {
+            const manualCopy = prompt('Copy this URL manually:', text);
+            if (manualCopy !== null) {
+                // User copied manually, show success anyway
+                showCopySuccess(button);
+            }
+        }
+        
+        // Load prompt content from URL
+        async function loadPromptFromUrl(url) {
+            // Prevent duplicate processing
+            if (promptUrlProcessed) {
+                return;
+            }
+            promptUrlProcessed = true;
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch content: ${response.status}`);
+                }
+                const content = await response.text();
+                
+                // Check for [parameter] placeholders in the content
+                const placeholderRegex = /\[([^\]]+)\]/g;
+                const placeholders = [];
+                let match;
+                
+                while ((match = placeholderRegex.exec(content)) !== null) {
+                    placeholders.push({
+                        placeholder: match[0], // e.g., [country]
+                        variable: match[1],    // e.g., country
+                        index: match.index
+                    });
+                }
+                
+                let processedContent = content.trim();
+                
+                // If there are placeholders, show dialog for each one
+                if (placeholders.length > 0) {
+                    for (const placeholder of placeholders) {
+                        const userInput = prompt(`Please enter a value for "${placeholder.variable}":`);
+                        if (userInput !== null) {
+                            processedContent = processedContent.replace(placeholder.placeholder, userInput);
+                        } else {
+                            // User cancelled, keep the placeholder
+                            console.log('User cancelled parameter input for:', placeholder.variable);
+                        }
+                    }
+                }
+                
+                // Set the processed content in the initial question textarea
+                const initialQuestionInput = document.getElementById('initial-question');
+                if (initialQuestionInput) {
+                    initialQuestionInput.value = processedContent;
+                    // Don't trigger saveSettings immediately to avoid overwriting other settings
+                    // The settings will be saved when the user interacts with the form
+                }
+            } catch (error) {
+                console.error('Error loading prompt from URL:', error);
+                // Optionally show a user-friendly error message
+                const initialQuestionInput = document.getElementById('initial-question');
+                if (initialQuestionInput) {
+                    initialQuestionInput.placeholder = `Error loading content from ${url}: ${error.message}`;
+                }
             }
         }
 
